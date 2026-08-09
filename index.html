@@ -238,26 +238,17 @@
                 <div class="form-group">
                     <label>درجة الحزام الحالي *</label>
                     <select id="beltDegree">
-                        <option value="أبيض">أبيض</option>
-                        <option value="أصفر 3">أصفر ثلاثة</option>
-                        <option value="أصفر 2">أصفر اثنين</option>
-                        <option value="أصفر 1">أصفر واحد</option>
-                        <option value="أورانج 3">أورانج ثلاثة</option>
-                        <option value="أورانج 2">أورانج اثنين</option>
-                        <option value="أورانج 1">أورانج واحد</option>
-                        <option value="أخضر 3">أخضر ثلاثة</option>
-                        <option value="أخضر 2">أخضر اثنين</option>
-                        <option value="أخضر 1">أخضر واحد</option>
-                        <option value="أزرق 6">أزرق ستة</option>
-                        <option value="أزرق 5">أزرق خمسة</option>
-                        <option value="أزرق 4">أزرق أربعة</option>
-                        <option value="أزرق 3">أزرق ثلاثة</option>
-                        <option value="أزرق 2">أزرق اثنين</option>
-                        <option value="أزرق 1">أزرق واحد</option>
-                        <option value="أحمر 3">أحمر ثلاثة</option>
-                        <option value="أحمر 2">أحمر اثنين</option>
-                        <option value="أحمر 1">أحمر واحد</option>
-                        <option value="أسود 1">أسود واحد</option>
+                        <option value="أصفر 1">أصفر 1</option>
+                        <option value="أصفر 2">أصفر 2</option>
+                        <option value="برتقالى">برتقالى</option>
+                        <option value="أخضر">أخضر</option>
+                        <option value="أزرق 6">أزرق 6</option>
+                        <option value="أزرق 5">أزرق 5</option>
+                        <option value="أزرق 4">أزرق 4</option>
+                        <option value="أحمر 3">أحمر 3</option>
+                        <option value="أحمر 2">أحمر 2</option>
+                        <option value="أحمر 1">أحمر 1</option>
+                        <option value="أسود">أسود</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -276,6 +267,7 @@
                         <option value="فري ستايل">فري ستايل</option>
                         <option value="بومزا وكروجي">بومزا وكروجي</option>
                         <option value="بومزا وكروجي وفري ستايل">بومزا وكروجي وفري ستايل</option>
+                        <option value="بومسي وفريستايل">بومسي وفريستايل</option>
                     </select>
                 </div>
                 <div class="form-group">
@@ -403,9 +395,8 @@
                 <label style="font-size:12px;margin-bottom:4px">الحزام</label>
                 <select id="filter-belt">
                     <option value="">الكل</option>
-                    <option value="أبيض">أبيض</option>
                     <option value="أصفر">أصفر</option>
-                    <option value="أورانج">أورانج</option>
+                    <option value="برتقالى">برتقالى</option>
                     <option value="أخضر">أخضر</option>
                     <option value="أزرق">أزرق</option>
                     <option value="أحمر">أحمر</option>
@@ -975,7 +966,7 @@ function editPlayer(id) {
     document.getElementById('medicalStatus').value  = player.medical_status || 'لم يتم الكشف';
     document.getElementById('weight').value         = player.weight || '';
     document.getElementById('height').value         = player.height || '';
-    document.getElementById('beltDegree').value     = player.belt_degree || 'أبيض';
+    document.getElementById('beltDegree').value     = player.belt_degree || 'أصفر 1';
     document.getElementById('parentJob').value      = player.parent_job || '';
     document.getElementById('joinDate').value       = player.join_date || '';
     document.getElementById('gameType').value       = player.game_type || 'بومزا';
