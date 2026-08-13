@@ -238,6 +238,7 @@
                 <div class="form-group">
                     <label>درجة الحزام الحالي *</label>
                     <select id="beltDegree">
+                        <option value="أبيض">أبيض</option>
                         <option value="أصفر 1">أصفر 1</option>
                         <option value="أصفر 2">أصفر 2</option>
                         <option value="برتقالى">برتقالى</option>
@@ -295,6 +296,10 @@
                 <div class="form-group full-width hidden" id="medicalReportsGroup">
                     <label>صور/ملفات الكشف الطبي (يمكن اختيار أكثر من صورة أو ملف PDF)</label>
                     <input type="file" id="medicalReports" accept="image/*,application/pdf" multiple>
+                </div>
+                <div class="form-group hidden" id="beltCertGroup">
+                    <label>صورة شهادة الحزام</label>
+                    <input type="file" id="beltCertificate" accept="image/*,application/pdf">
                 </div>
             </div>
 
@@ -395,6 +400,7 @@
                 <label style="font-size:12px;margin-bottom:4px">الحزام</label>
                 <select id="filter-belt">
                     <option value="">الكل</option>
+                    <option value="أبيض">أبيض</option>
                     <option value="أصفر">أصفر</option>
                     <option value="برتقالى">برتقالى</option>
                     <option value="أخضر">أخضر</option>
@@ -469,6 +475,14 @@
                 </button>
                 <img id="modal-cert-img" class="hidden" src="" alt="لم تُرفع">
                 <p id="no-cert-msg" style="color:#999;font-size:12px;margin-top:8px"></p>
+            </div>
+            <div class="img-box">
+                <h4>شهادة الحزام</h4>
+                <button class="btn btn-secondary" style="margin-top:8px;padding:6px 12px;font-size:13px" id="btn-view-beltcert">
+                    <i class="fa-solid fa-eye"></i> عرض
+                </button>
+                <img id="modal-beltcert-img" class="hidden" src="" alt="لم تُرفع">
+                <p id="no-beltcert-msg" style="color:#999;font-size:12px;margin-top:8px"></p>
             </div>
         </div>
         <h3 style="margin:20px 0 10px">ملفات الكشف الطبي</h3>
@@ -606,6 +620,20 @@ document.getElementById('medicalStatus').addEventListener('change', function () 
 });
 
 // =====================================================
+// إظهار/إخفاء حقل صورة شهادة الحزام حسب الحزام المختار
+// (بيظهر فقط لو الحزام مش أبيض)
+// =====================================================
+document.getElementById('beltDegree').addEventListener('change', function () {
+    const group = document.getElementById('beltCertGroup');
+    if (this.value !== 'أبيض') {
+        group.classList.remove('hidden');
+    } else {
+        group.classList.add('hidden');
+        document.getElementById('beltCertificate').value = '';
+    }
+});
+
+// =====================================================
 // تحديث الميزان للاعبين (نافذة التحقق والتحكم)
 // =====================================================
 document.getElementById('update-weight-btn').addEventListener('click', () => {
@@ -739,6 +767,7 @@ document.getElementById('player-form').addEventListener('submit', async function
     const certFile   = document.getElementById('birthCertificate').files[0];
     const medicalStatusVal = document.getElementById('medicalStatus').value;
     const medicalFiles = document.getElementById('medicalReports').files;
+    const beltCertFile = document.getElementById('beltCertificate').files[0];
 
     // لو الكشف الطبي "تم" ولسه تسجيل جديد (مش تعديل) لازم يرفع ملف كشف واحد على الأقل
     if (medicalStatusVal === 'تم الكشف' && medicalFiles.length === 0 && !currentEditId) {
@@ -753,9 +782,11 @@ document.getElementById('player-form').addEventListener('submit', async function
         let photoUrl = '';
         let certUrl  = '';
         let medicalUrl = '';
+        let beltCertUrl = '';
         if (photoFile) photoUrl = await uploadFile(photoFile, 'photo', fullName);
         if (certFile)  certUrl  = await uploadFile(certFile,  'cert',  fullName);
         if (medicalFiles.length) medicalUrl = await uploadMultipleFiles(medicalFiles, 'medical', fullName);
+        if (beltCertFile) beltCertUrl = await uploadFile(beltCertFile, 'beltcert', fullName);
 
         const playerData = {
             full_name:       fullName,
@@ -779,6 +810,7 @@ document.getElementById('player-form').addEventListener('submit', async function
         if (photoUrl) playerData.photo_url = photoUrl;
         if (certUrl)  playerData.cert_url  = certUrl;
         if (medicalUrl) playerData.medical_reports = medicalUrl;
+        if (beltCertUrl) playerData.belt_cert_url = beltCertUrl;
 
         if (currentEditId) {
             const { error } = await db.from('players').update(playerData).eq('id', currentEditId);
@@ -795,6 +827,7 @@ document.getElementById('player-form').addEventListener('submit', async function
 
         this.reset();
         document.getElementById('medicalReportsGroup').classList.add('hidden');
+        document.getElementById('beltCertGroup').classList.add('hidden');
         fetchAndRender();
 
     } catch (err) {
@@ -934,6 +967,18 @@ async function showPlayerDetails(id) {
         document.getElementById('btn-view-cert').onclick = null;
     }
 
+    const beltCertImg = document.getElementById('modal-beltcert-img');
+    const beltCertMsg = document.getElementById('no-beltcert-msg');
+    beltCertImg.classList.add('hidden');
+    if (player.belt_cert_url) {
+        beltCertImg.src = player.belt_cert_url;
+        beltCertMsg.textContent = "";
+        document.getElementById('btn-view-beltcert').onclick = () => beltCertImg.classList.toggle('hidden');
+    } else {
+        beltCertMsg.textContent = "لم يتم رفع شهادة حزام";
+        document.getElementById('btn-view-beltcert').onclick = null;
+    }
+
     // عرض ملفات الكشف الطبي (روابط قابلة للفتح، صور أو PDF)
     const medicalContainer = document.getElementById('modal-medical-reports');
     if (player.medical_reports) {
@@ -966,7 +1011,7 @@ function editPlayer(id) {
     document.getElementById('medicalStatus').value  = player.medical_status || 'لم يتم الكشف';
     document.getElementById('weight').value         = player.weight || '';
     document.getElementById('height').value         = player.height || '';
-    document.getElementById('beltDegree').value     = player.belt_degree || 'أصفر 1';
+    document.getElementById('beltDegree').value     = player.belt_degree || 'أبيض';
     document.getElementById('parentJob').value      = player.parent_job || '';
     document.getElementById('joinDate').value       = player.join_date || '';
     document.getElementById('gameType').value       = player.game_type || 'بومزا';
@@ -977,6 +1022,10 @@ function editPlayer(id) {
     const medicalGroup = document.getElementById('medicalReportsGroup');
     if (player.medical_status === 'تم الكشف') medicalGroup.classList.remove('hidden');
     else medicalGroup.classList.add('hidden');
+
+    const beltCertGroup = document.getElementById('beltCertGroup');
+    if (player.belt_degree && player.belt_degree !== 'أبيض') beltCertGroup.classList.remove('hidden');
+    else beltCertGroup.classList.add('hidden');
 
     // في وضع التعديل: الصورة الشخصية وشهادة الميلاد تصبح اختيارية
     // (لو مفيش رفع جديد هتفضل البيانات القديمة زي ما هي في قاعدة البيانات)
@@ -1030,6 +1079,7 @@ function cancelEdit() {
     editBanner.classList.add('hidden');
     document.getElementById('player-form').reset();
     document.getElementById('medicalReportsGroup').classList.add('hidden');
+    document.getElementById('beltCertGroup').classList.add('hidden');
     // إرجاع الصورة الشخصية وشهادة الميلاد إجبارية في وضع التسجيل الجديد
     document.getElementById('personalPhoto').required = true;
     document.getElementById('birthCertificate').required = true;
