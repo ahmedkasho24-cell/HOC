@@ -308,6 +308,9 @@
                     <i class="fa-solid fa-cloud-arrow-up"></i> إتمام التسجيل والحفظ
                 </button>
                 <div style="display:flex; gap:10px;">
+                    <button type="button" class="btn btn-secondary" id="player-login-btn">
+                        <i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول
+                    </button>
                     <button type="button" class="btn btn-warning" id="update-weight-btn">
                         <i class="fa-solid fa-weight-scale"></i> تحديث الميزان
                     </button>
@@ -529,6 +532,25 @@
     </div>
 </div>
 
+<!-- Modal تسجيل الدخول للاعب (تعديل بياناته الخاصة) -->
+<div id="player-login-modal" class="modal hidden">
+    <div class="modal-content" style="max-width: 450px;">
+        <button class="close-modal" id="close-player-login-modal-btn">&times;</button>
+        <h2><i class="fa-solid fa-right-to-bracket"></i> تسجيل الدخول</h2>
+        <p style="color:var(--text-muted);font-size:13px;margin-bottom:15px">
+            ادخل رقم الهاتف الأساسي أو الإضافي المسجل به بياناتك، وهنفتحلك ملفك عشان تعدّل بياناتك أو تضيف الصور الناقصة.
+        </p>
+        <div class="form-group" style="margin-bottom: 20px;">
+            <label>رقم الهاتف</label>
+            <input type="tel" id="player-login-phone" placeholder="أدخل رقم الهاتف الأساسي أو الإضافي"
+                onkeypress="if(event.key==='Enter') document.getElementById('player-login-search-btn').click()">
+        </div>
+        <button class="btn" id="player-login-search-btn" style="width: 100%;">
+            <i class="fa-solid fa-magnifying-glass"></i> دخول وتعديل بياناتي
+        </button>
+    </div>
+</div>
+
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
@@ -541,6 +563,7 @@ const db = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 let players = [];
 let currentEditId = null;
 let currentWeightPlayer = null;
+let isSelfServiceEdit = false; // true لما اللاعب نفسه يدخل يعدل بياناته من زرار تسجيل الدخول
 
 // Elements
 const regPage    = document.getElementById('registration-page');
@@ -553,6 +576,9 @@ const editBanner = document.getElementById('edit-banner');
 const weightModal = document.getElementById('weight-update-modal');
 const weightStepSearch = document.getElementById('weight-step-search');
 const weightStepEdit = document.getElementById('weight-step-edit');
+
+// Player Self-Login Modal Elements
+const playerLoginModal = document.getElementById('player-login-modal');
 
 document.getElementById('go-to-login-btn').addEventListener('click', () => {
     regPage.classList.add('hidden');
@@ -725,6 +751,58 @@ document.getElementById('weight-save-btn').addEventListener('click', async () =>
 });
 
 // =====================================================
+// تسجيل دخول اللاعب لتعديل بياناته الخاصة (برقم الهاتف)
+// =====================================================
+document.getElementById('player-login-btn').addEventListener('click', () => {
+    playerLoginModal.classList.remove('hidden');
+    document.getElementById('player-login-phone').value = '';
+});
+
+document.getElementById('close-player-login-modal-btn').addEventListener('click', () => playerLoginModal.classList.add('hidden'));
+playerLoginModal.addEventListener('click', e => { if (e.target === playerLoginModal) playerLoginModal.classList.add('hidden'); });
+
+document.getElementById('player-login-search-btn').addEventListener('click', async () => {
+    const phoneInput = document.getElementById('player-login-phone').value.trim();
+    const searchBtn = document.getElementById('player-login-search-btn');
+
+    if (!phoneInput) {
+        showToast('⚠️ يرجى إدخال رقم الهاتف أولاً', 'error');
+        return;
+    }
+
+    searchBtn.disabled = true;
+    searchBtn.innerHTML = '<span class="spinner"></span> جاري البحث...';
+
+    try {
+        const { data, error } = await db
+            .from('players')
+            .select('*')
+            .or(`primary_phone.eq.${phoneInput},secondary_phone.eq.${phoneInput}`);
+
+        if (error) throw error;
+
+        if (data && data.length > 0) {
+            const player = data[0];
+            // نضيف/نحدّث بيانات اللاعب في القايمة المحلية عشان فورم التعديل يقدر يقرأها
+            const idx = players.findIndex(p => p.id === player.id);
+            if (idx >= 0) players[idx] = player; else players.push(player);
+
+            playerLoginModal.classList.add('hidden');
+            isSelfServiceEdit = true;
+            editPlayer(player.id);
+            showToast('✅ تم العثور على بياناتك، عدّل ما تحتاجه واحفظ', 'success');
+        } else {
+            showToast('❌ لم يتم العثور على أي لاعب بهذا الرقم', 'error');
+        }
+    } catch (err) {
+        showToast('❌ حدث خطأ أثناء البحث: ' + err.message, 'error');
+    } finally {
+        searchBtn.disabled = false;
+        searchBtn.innerHTML = '<i class="fa-solid fa-magnifying-glass"></i> دخول وتعديل بياناتي';
+    }
+});
+
+// =====================================================
 // رفع الملفات والصور إلى Supabase
 // =====================================================
 async function uploadFile(file, prefix, playerName) {
@@ -816,9 +894,16 @@ document.getElementById('player-form').addEventListener('submit', async function
             const { error } = await db.from('players').update(playerData).eq('id', currentEditId);
             if (error) throw error;
             showToast('✅ تم تعديل بيانات اللاعب بنجاح', 'success');
+            const wasSelfService = isSelfServiceEdit;
             cancelEdit();
-            adminPage.classList.remove('hidden');
-            regPage.classList.add('hidden');
+            if (wasSelfService) {
+                // اللاعب نفسه اللي عدّل بياناته - يفضل في صفحة التسجيل العادية، مايتفتحش له لوحة الأدمن
+                regPage.classList.remove('hidden');
+                adminPage.classList.add('hidden');
+            } else {
+                adminPage.classList.remove('hidden');
+                regPage.classList.add('hidden');
+            }
         } else {
             const { error } = await db.from('players').insert([playerData]);
             if (error) throw error;
@@ -1076,6 +1161,7 @@ function showToast(msg, type = 'success') {
 // =====================================================
 function cancelEdit() {
     currentEditId = null;
+    isSelfServiceEdit = false;
     editBanner.classList.add('hidden');
     document.getElementById('player-form').reset();
     document.getElementById('medicalReportsGroup').classList.add('hidden');
